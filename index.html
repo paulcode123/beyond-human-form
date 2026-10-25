@@ -1,0 +1,1033 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Beyond the Human Form</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one fixed low-poly 3D canvas behind tall scroll sections; pinned sections hold a glass text card
+   on the left over a scene, reading sections scroll normally over a dimmed scene. Solid = physical, wireframe = simulated. */
+:root{
+  color-scheme: dark;
+  --void:#0B1020; --ink:#E8ECF6; --body:#CBD3E6; --mute:#9AA6C4; --dim:#66729A;
+  --line:rgba(154,166,196,.24); --glass:rgba(13,19,38,.78); --glass2:rgba(13,19,38,.9);
+  --cyan:#3DDCFF; --orange:#FF6B35;
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{background:var(--void);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));overflow-x:hidden}
+#sky{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(120% 90% at 70% 10%, #24305a 0%, transparent 55%), linear-gradient(180deg,#0B1020 0%,#141c36 55%,#1B2440 100%)}
+#gl{position:fixed;inset:0;width:100%;height:100%;z-index:1;display:block}
+#veil{position:fixed;inset:0;background:var(--void);opacity:0;z-index:2;pointer-events:none}
+main{position:relative;z-index:3}
+.slide{position:relative;height:calc(var(--pin,2) * 100vh)}
+.stage{position:sticky;top:0;height:100vh;overflow:hidden;pointer-events:none}
+.stage a{pointer-events:auto}
+
+/* text card */
+.card{position:absolute;left:clamp(0px,2.4vw,40px);top:clamp(64px,11vh,120px);width:min(520px,100%);max-height:calc(100vh - clamp(96px,16vh,170px));overflow:auto;
+  background:var(--glass);border:1px solid var(--line);border-radius:4px;padding:24px 26px 22px;pointer-events:auto;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:flex;flex-direction:column;gap:14px}
+.qtag{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);margin:0;display:flex;gap:8px;align-items:center}
+.qtag::before{content:"";width:7px;height:7px;background:var(--orange);display:inline-block;flex:none}
+.h{font-family:var(--f-display);font-stretch:118%;font-weight:760;font-size:clamp(26px,3vw,40px);line-height:1.06;letter-spacing:-.012em;margin:0;text-wrap:balance}
+.txt b{color:var(--ink);font-weight:600}
+.txt{margin:0;color:var(--body);font-size:16px;line-height:1.65;max-width:60ch}
+.list{margin:0;padding-left:22px;display:grid;gap:10px;color:var(--body);font-size:15.5px;line-height:1.6}
+.list li::marker{font-family:var(--f-mono);color:var(--orange)}
+
+/* opening story */
+.story{display:grid;gap:16px}
+.story p{margin:0;font-family:var(--f-display);font-stretch:108%;font-weight:600;font-size:clamp(19px,1.9vw,25px);line-height:1.3;color:var(--ink);text-wrap:pretty}
+.story p:first-child{font-stretch:118%;font-weight:760;font-size:clamp(24px,2.6vw,34px);line-height:1.12}
+
+/* reveal system */
+.fx{opacity:0;transform:translateY(10px);transition:opacity .45s ease,transform .55s cubic-bezier(.2,.8,.2,1)}
+.fx.on{opacity:1;transform:none}
+.card.fx{pointer-events:none}
+.card.fx.on{pointer-events:auto}
+
+.bigq{position:absolute;left:50%;top:26%;transform:translate(-50%,-50%);width:min(900px,92%);text-align:center;margin:0;font-family:var(--f-display);font-stretch:120%;font-weight:780;
+  font-size:clamp(30px,4.6vw,62px);line-height:1.06;letter-spacing:-.015em;text-wrap:balance;text-shadow:0 2px 30px rgba(11,16,32,.9)}
+.bigq.fx{transform:translate(-50%,-40%)}
+.bigq.fx.on{transform:translate(-50%,-50%)}
+.bigq em{font-style:normal;color:var(--cyan)}
+
+/* beat panels (right) and beat index (left) */
+.panel{position:absolute;right:clamp(28px,4vw,64px);top:clamp(64px,11vh,120px);width:min(420px,calc(100% - 32px));
+  background:var(--glass);border:1px solid var(--line);border-radius:4px;padding:20px 22px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  display:flex;flex-direction:column;gap:12px}
+.beat-h{font-family:var(--f-display);font-stretch:112%;font-weight:720;font-size:22px;line-height:1.15;margin:0;text-wrap:balance}
+.beat-p{margin:0;color:var(--body);font-size:15.5px;line-height:1.6}
+.beats{position:absolute;left:clamp(0px,2.4vw,40px);top:clamp(64px,11vh,120px);width:min(380px,100%);list-style:none;margin:0;padding:0;display:grid;gap:8px;transition:opacity .5s}
+.beats.gone{opacity:0}
+.beats li{display:grid;grid-template-columns:20px 1fr;gap:10px;align-items:center;font-family:var(--f-mono);font-size:12px;text-transform:uppercase;letter-spacing:.06em;
+  padding:9px 12px;background:var(--glass2);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:3px;color:var(--dim);transition:color .3s,border-color .3s,background .3s}
+.beats li b{font-family:var(--f-display);font-size:16px;font-weight:720}
+.beats li.on{color:var(--ink);border-color:rgba(255,107,53,.55);border-left-color:var(--orange)}
+.beats li.on b{color:var(--orange)}
+.beats li.done{color:var(--mute)}
+.beats li.beats-head{font-size:11.5px;letter-spacing:.14em;color:var(--cyan);margin:0 0 4px;display:flex;gap:8px;align-items:center;background:none;border:0;padding:0}
+.beats li.beats-head::before{content:"";width:7px;height:7px;background:var(--orange);display:inline-block}
+@media (max-width:860px){
+  .panel{right:0;left:0;width:auto;top:auto;bottom:16px;max-height:56vh;overflow:auto;padding:14px 16px;gap:8px}
+  .beat-h{font-size:18px}
+  .beat-p{font-size:14px}
+  .beats{top:56px;left:0;width:100%;grid-template-columns:repeat(5,1fr);gap:4px}
+  .beats li.beats-head{grid-column:1/-1;font-size:11px}
+  .beats li:not(.beats-head){font-size:0;padding:0;height:6px;border-left-width:1px;grid-template-columns:1fr}
+  .beats li:not(.beats-head) b{display:none}
+  .beats li.on{background:var(--orange)}
+  .beats li.done{background:var(--mute)}
+}
+
+/* RL definitions: the row for the current phase lights up */
+.defs{display:grid;gap:8px;margin:0}
+.defs div{display:grid;grid-template-columns:70px 1fr;gap:12px;align-items:baseline;padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--line);border-radius:3px;background:var(--glass2);transition:border-color .3s}
+.defs dt{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.defs dd{margin:0;color:var(--body);font-size:15px;line-height:1.5}
+.defs div.on{border-color:rgba(255,107,53,.5);border-left-color:var(--orange)}
+.defs div.on dt{color:var(--orange)}
+.defs div.on dd{color:var(--ink)}
+
+/* reading sections */
+.read{position:relative;z-index:3;padding-block:16vh;display:grid;gap:18px;max-width:1100px;margin:0 auto}
+.read-head{display:grid;gap:14px;max-width:720px}
+.pipe{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-family:var(--f-mono);font-size:12.5px;letter-spacing:.1em;text-transform:uppercase}
+.pipe span{padding:7px 12px;border:1px solid rgba(61,220,255,.5);border-radius:3px;color:var(--cyan);background:var(--glass2)}
+.pipe em{font-style:normal;color:var(--dim)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.tile{background:var(--glass2);border:1px solid var(--line);border-radius:4px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;min-width:0;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.tile h3{margin:0;font-family:var(--f-display);font-stretch:110%;font-weight:700;font-size:19px;line-height:1.2;text-wrap:balance}
+.tile h4{margin:0;font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--orange)}
+.tile p{margin:0;color:var(--body);font-size:14.5px;line-height:1.6}
+.tile .lead{color:var(--ink);font-size:15.5px}
+.tile .src{font-family:var(--f-mono);font-size:11.5px;color:var(--mute);line-height:1.5}
+.tile a{color:var(--cyan);text-decoration-color:rgba(61,220,255,.4);text-underline-offset:2px}
+.tile a:hover{text-decoration-color:var(--cyan)}
+.tile a:focus-visible,.closer a:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+
+.closer{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(760px,94%);display:grid;gap:16px;background:var(--glass);border:1px solid var(--line);border-radius:4px;padding:28px 30px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.closer.fx{transform:translate(-50%,-44%)}
+.closer.fx.on{transform:translate(-50%,-50%)}
+.closer .txt{font-size:17px;max-width:none}
+
+/* persistent UI */
+#rail{position:fixed;z-index:6;right:calc(8px + env(safe-area-inset-right,0px));top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:9px}
+#rail button{position:relative;width:12px;height:12px;padding:0;border:1px solid var(--dim);background:transparent;border-radius:50%;cursor:pointer}
+#rail button.on{background:var(--cyan);border-color:var(--cyan)}
+#rail button span{position:absolute;right:20px;top:50%;transform:translateY(-50%);white-space:nowrap;font-family:var(--f-mono);font-size:11px;color:var(--ink);background:var(--glass2);border:1px solid var(--line);padding:3px 7px;border-radius:2px;opacity:0;transition:opacity .2s;pointer-events:none}
+#rail button:hover span,#rail button:focus-visible span{opacity:1}
+@media (min-width:1100px){#rail button.on span{opacity:1}}
+#rail button:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+#hint{position:fixed;z-index:6;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);font-family:var(--f-mono);font-size:12px;color:var(--ink);letter-spacing:.1em;transition:opacity .4s;pointer-events:none}
+#hint i{display:inline-block;animation:bob 1.4s ease-in-out infinite;font-style:normal}
+@keyframes bob{50%{transform:translateY(4px)}}
+#nogl{position:fixed;inset:auto 16px 16px auto;z-index:7;font-family:var(--f-mono);font-size:12px;color:var(--mute)}
+
+@media (max-width:860px){
+  .card{top:56px;padding:16px;gap:10px;width:100%;left:0;max-height:calc(100vh - 80px)}
+  .txt{font-size:14.5px}
+  .list{font-size:14px}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .closer{padding:20px}
+  .closer .txt{font-size:15px}
+}
+@media (min-width:861px) and (max-width:1100px){.grid3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (prefers-reduced-motion:reduce){
+  .fx{transition:none!important}
+  #hint i{animation:none}
+}
+</style>
+<style>body{margin:0}</style>
+</head>
+<body>
+
+<div id="sky"></div>
+<canvas id="gl" aria-hidden="true"></canvas>
+<div id="veil"></div>
+<nav id="rail" aria-label="Sections"></nav>
+<div id="hint">SCROLL <i>&darr;</i></div>
+
+<main id="story">
+
+<!-- 0 · THE ORDER -->
+<section class="slide" id="order" style="--pin:3.2" data-label="2046">
+ <div class="stage">
+  <div class="card" data-in="0" data-out=".7">
+    <p class="qtag">2046</p>
+    <div class="story">
+      <p>It's 2046. A bakery gets an order for 5,000 pastry boxes. By tomorrow.</p>
+      <p class="fx" data-in=".12">The owner photographs the counter, enters the box dimensions, and orders a robot.</p>
+      <p class="fx" data-in=".28">By morning, a compact machine is folding boxes and packing pastries. Its arms fit beneath the shelves; its gripper handles the paper without crushing the food.</p>
+      <p class="fx" data-in=".5">Next week, those same components will become a different machine, doing a different job.</p>
+    </div>
+  </div>
+  <p class="bigq" data-in=".74">What if ordering a robot started with the task, <em>and the body came afterward?</em></p>
+ </div>
+</section>
+
+<!-- 0b · HUMANOIDS AS THE DEFAULT -->
+<section class="slide" id="world" style="--pin:1.7" data-label="The humanoid default">
+ <div class="stage">
+  <div class="card" data-in="0" data-out=".9">
+    <p class="qtag">The world · 2046</p>
+    <h2 class="h">Twenty years after robotics decided to copy the human body, it still hasn't questioned that choice.</h2>
+    <p class="txt">The field settled on the humanoid early, because a world built for people seemed to call for robots shaped like people. Every step since has deepened that commitment: the training data comes from human demonstrations and video of people at work, and investment and benchmarks have followed the same shape.</p>
+    <p class="txt">By 2046 the robot brain is effectively solved, but <b>the body has barely been questioned, and it has become the main thing holding robotics back.</b></p>
+  </div>
+ </div>
+</section>
+
+<section class="slide" id="beats" style="--pin:5" data-label="How we got here">
+ <div class="stage">
+  <ol class="beats" data-on=".86" data-cls="gone" data-marks="0,.17,.34,.51,.68" aria-label="How we got here">
+    <li class="beats-head">How we got here</li>
+    <li data-b="0"><b>1</b>Simulation matches reality</li>
+    <li data-b="1"><b>2</b>The field kept the same body</li>
+    <li data-b="2"><b>3</b>A copied body inherits limits</li>
+    <li data-b="3"><b>4</b>Valuable work is beyond them</li>
+    <li data-b="4"><b>5</b>The body is chosen first</li>
+  </ol>
+  <div class="panel" data-in="0" data-out=".17">
+    <h2 class="beat-h">Simulation finally matches reality.</h2>
+    <p class="beat-p">World models can build a detailed environment from a scan or a short description, and physics engines are now accurate enough that what a robot learns in simulation carries over when it is deployed.</p>
+  </div>
+  <div class="panel" data-in=".17" data-out=".34">
+    <h2 class="beat-h">Yet the field kept training the same body.</h2>
+    <p class="beat-p">Tools that could have explored any shape were spent perfecting one, because the data, the supply chain and everyone's expectations were already built around the humanoid.</p>
+  </div>
+  <div class="panel" data-in=".34" data-out=".51">
+    <h2 class="beat-h">A copied body inherits human limits.</h2>
+    <p class="beat-p">A humanoid designed to work in our spaces also takes on our reach, grip, senses and reflexes, so it can match a person but was never meant to surpass one.</p>
+  </div>
+  <div class="panel" data-in=".51" data-out=".68">
+    <h2 class="beat-h">The most valuable work lies beyond those limits.</h2>
+    <p class="beat-p">Repairing the inside of a fusion reactor, assembling structures in orbit, operating at scales finer than a surgeon's hand, and harvesting a field around the clock are all jobs where a human-shaped body gets in the way.</p>
+  </div>
+  <div class="panel" data-in=".68" data-out=".85">
+    <h2 class="beat-h">The body is still chosen before training starts.</h2>
+    <p class="beat-p">Engineers pick the motors, joints and sensors by hand, often borrowing from our own anatomy, and RL then learns to make the best of whatever it was given.</p>
+  </div>
+  <p class="bigq" data-in=".87">What if the body were trained <em>along with the brain?</em></p>
+ </div>
+</section>
+
+<!-- 0c · THESIS -->
+<section class="slide" id="thesis" style="--pin:1.7" data-label="Thesis">
+ <div class="stage">
+  <div class="card" data-in="0" data-out=".9">
+    <p class="qtag">Thesis</p>
+    <h2 class="h">The human body is a remarkable generalist, which is exactly why it makes a poor template for specialized work.</h2>
+    <p class="txt">Evolution shaped our bodies to survive in many environments, not to excel at any single task. Every part of that design is a compromise between speed and strength, precision and reach, and senses tuned to what our ancestors needed to notice. <b>When robots copy that design, they copy the compromises along with it.</b></p>
+  </div>
+ </div>
+</section>
+
+<!-- 1 · OVERVIEW -->
+<section class="slide" id="overview" style="--pin:2" data-label="Overview">
+ <div class="stage">
+  <div class="card" data-in="0" data-out=".92">
+    <p class="qtag">Overview</p>
+    <p class="txt">We propose a generalized process for creating task-specific robots. Given details on a specific task, we iterate over various modular combinations in order to determine which robot design performs the best. Then, we use reinforcement learning in order to create a specialized model for the task. A hybrid pipeline of mass production and skilled human assembly then creates the final robot. Despite limitations of task-specific robots when compared to generalized designs, we achieve positive unit economics as well as sustainability through a contract model and reusable components. Ultimately, we hope to lessen the barrier to entry for manufacturing, reinvigorating domestic manufacturing and innovation.</p>
+  </div>
+ </div>
+</section>
+
+<!-- 2 · PREMISE -->
+<section class="slide" id="premise" style="--pin:2.2" data-label="Premise">
+ <div class="stage">
+  <div class="card" data-in="0" data-out=".92">
+    <p class="qtag">Our premise</p>
+    <h2 class="h">Sim-to-real will be solved in the future.</h2>
+    <ol class="list">
+      <li>World models are able to generate 3D worlds from prompts (Atlas, Marble from World Labs, etc.).</li>
+      <li>RL solves the gap, meaning that physics engines like MuJoCo plus AGI with near-infinite capabilities are able to simulate tons of data.</li>
+      <li>Smarter models mean less data is required: AGI generates smarter robotics frameworks with more efficient actuation, policies, etc. for fewer actuators and degrees of freedom.</li>
+      <li>Compute power and vertical scale are only increasing, which allows for custom world or environment generation and physics engine accuracy.</li>
+    </ol>
+  </div>
+ </div>
+</section>
+
+<!-- 3 · SIMULATION -->
+<section class="slide" id="simulation" style="--pin:3.4" data-label="Simulation">
+ <div class="stage">
+  <div class="card" data-in="0" data-out=".5">
+    <p class="qtag">Simulation</p>
+    <p class="txt">In our simulation, we begin by evaluating a "parent configuration," which is a well-understood robot design that best matches the requisite task. From there, we evaluate hundreds of modularized variants (candidate configurations) from our parts library that can interact with the customer's task. Before we run any specific simulations, we utilize a physical constraint model to reject designs that exceed torque, payload, connector load limits, etc.</p>
+  </div>
+  <div class="card" data-in=".5">
+    <p class="qtag">Training and ranking</p>
+    <p class="txt">For each finalist, a model writes a reward function suitable for that variant's structure. The control policies of the finalists are refined through thousands of randomized simulations involving the requisite task. Finalists are ranked on specific criteria chosen by the customer (e.g. task success, cycle time, dollar cost) to find the winner. Real-world results from each deployment are fed back into our database and module calibrations, so we can make better future recommendations with our model.</p>
+  </div>
+ </div>
+</section>
+
+<!-- 3b · RL ENVIRONMENT -->
+<section class="slide" id="rl" style="--pin:3.6" data-label="RL environment">
+ <div class="stage">
+  <div class="card" data-in="0" data-out=".97">
+    <p class="qtag">RL environment</p>
+    <h2 class="h">The agent learns the robot's body.</h2>
+    <dl class="defs">
+      <div data-def="state"><dt>State</dt><dd>The current robot configuration.</dd></div>
+      <div data-def="action"><dt>Action</dt><dd>Adding a sensor or actuator.</dd></div>
+      <div data-def="reward"><dt>Reward</dt><dd>The robot's performance on the task in simulation.</dd></div>
+    </dl>
+    <p class="txt">Each step, the agent changes the robot, the new design is tested in simulation, and the reward decides which changes are kept.</p>
+  </div>
+ </div>
+</section>
+
+<!-- 4 · ROBOT FRAMEWORK -->
+<section class="slide" id="framework" style="--pin:2.2" data-label="Robot framework">
+ <div class="stage">
+  <div class="card" data-in="0" data-out=".92">
+    <p class="qtag">Robot framework</p>
+    <p class="txt">Our design is highly modular, so once our RL framework settles on the best arrangement of components, we simply put the pieces together. Any of our designs can be made from combinations of core components, joints, structural links, locomotive devices, end effectors, and sensors, all of which can be linked together with a universal connector. This enables a broad range of capabilities, both from the same manufacturing process and from the same instantiated robot.</p>
+  </div>
+ </div>
+</section>
+
+<!-- 5 · MANUFACTURING -->
+<section class="slide" id="manufacturing" style="--pin:2.2" data-label="Manufacturing">
+ <div class="stage">
+  <div class="card" data-in="0" data-out=".92">
+    <p class="qtag">Manufacturing</p>
+    <p class="txt">We mass-produce components for our project, and we would aim to own the entire vertical stack when it comes to these mechanical components. Our core techniques are CNC machining, injection molding, and PCB assembly. Parts of this process are highly automatable; in other parts, though, it truly is more efficient to hire skilled human labor.</p>
+    <p class="txt">To assemble our robots, we simply join these components with universal connectors. This is highly automatable.</p>
+  </div>
+ </div>
+</section>
+
+<!-- 6 · HOW IT WORKS (reading) -->
+<section class="read" id="how" data-label="How it works">
+  <div class="read-head">
+    <p class="qtag">How it works</p>
+    <div class="pipe" aria-label="design, train, transfer, deploy, reuse"><span>design</span><em>&rarr;</em><span>train</span><em>&rarr;</em><span>transfer</span><em>&rarr;</em><span>deploy</span><em>&rarr;</em><span>reuse</span></div>
+  </div>
+  <div class="grid2">
+    <article class="tile">
+      <h3>How can we predict the behavior of a newly assembled robot?</h3>
+      <p class="lead">Known components make the modeling problem smaller. We reuse their physical descriptions, then calibrate the interactions introduced by the new assembly.</p>
+      <h4>Technical details</h4>
+      <p>The assembly graph determines geometry, mass distribution, and joint connections. Component models supply actuator behavior; short calibration routines estimate remaining errors from friction, connector flexibility, and tolerances. Stronger AI could automate experiment selection and model correction.</p>
+      <p class="src">Research: <a href="https://www.pnas.org/doi/10.1073/pnas.2519129123" target="_blank" rel="noopener">Agile legged locomotion in reconfigurable modular robots</a>, PNAS, 2026, demonstrates physical modular assemblies with learned control.</p>
+    </article>
+    <article class="tile">
+      <h3>Does every robot body in a new environment need to learn from scratch?</h3>
+      <p class="lead">Changing the body does not erase all useful knowledge. A controller can reuse skills while adapting to the new arrangement.</p>
+      <h4>Technical details</h4>
+      <p>Condition the policy on an assembly graph containing module properties and connectivity. Share parameters across compatible modules, pretrain across many simulated configurations, and fine-tune unfamiliar assemblies. Initially restrict transfer claims to a defined component and task family.</p>
+      <p class="src">Research: <a href="https://doi.org/10.1109/TRO.2023.3284362" target="_blank" rel="noopener">Learning Modular Robot Control Policies</a>, IEEE Transactions on Robotics, 2023, demonstrates shared policies and generalization to unseen modular designs.</p>
+    </article>
+    <article class="tile">
+      <h3>How can we find good designs of new robots at a low cost?</h3>
+      <p class="lead">The system learns which designs deserve expensive testing. Experience from earlier projects narrows the search for the next one.</p>
+      <h4>Technical details</h4>
+      <p>Reject physically infeasible assemblies first, screen candidates with inexpensive evaluations, then allocate longer training to promising or uncertain designs. Evaluate learning curves so a potentially superior body is not rejected merely because it learns slowly. RL trains behavior; design search can use RL, Bayesian optimization, or evolutionary methods.</p>
+      <p class="src">Research: <a href="https://arxiv.org/abs/2110.03659" target="_blank" rel="noopener">Transform2Act</a>, ICLR, 2022, demonstrates experience sharing across design and control. This is a conference paper.</p>
+    </article>
+    <article class="tile">
+      <h3>Why should a robot optimized in simulation work in reality?</h3>
+      <p class="lead">Simulation needs to capture the variations that affect successful control. Robust policies can tolerate some modeling error, with physical testing identifying consequential mismatches.</p>
+      <h4>Technical details</h4>
+      <p>Vary friction, contact, actuator response, sensor noise, and delay during training. Give the deployed policy only measurements its actual sensors provide. Test shortlisted designs under held-out conditions and physically validate them; use calibration or targeted post-training when transfer falls short.</p>
+      <p class="src">Research: <a href="https://arxiv.org/abs/2305.17110" target="_blank" rel="noopener">IndustReal</a>, RSS, 2023, demonstrates bounded transfer for contact-rich assembly. It supports this mechanism, not universal sim-to-real transfer.</p>
+    </article>
+  </div>
+</section>
+
+<!-- 7 · ECONOMICS (reading) -->
+<section class="read" id="economics" data-label="Economics">
+  <div class="read-head">
+    <p class="qtag">Economics</p>
+    <p class="txt">Despite the typical disadvantages of task-specific hardware when compared to generalized approaches, we achieve positive unit economics through our business model. Our biggest markets would be specialized tasks in manufacturing, agriculture, and warehouse automation, but we also see significant use cases for small businesses. We are contracted with companies, charge a fee when implementing a new robot design, and implement a subscription model to charge for new instances and to lease the models' components. We achieve economies of scale by reusing components for new applications. In doing so, we also maintain sustainability and circumvent the scarcity of the requisite rare earth magnets.</p>
+  </div>
+  <div class="grid3">
+    <article class="tile"><h4>Economic outlook</h4><p>Stronger AI and cheaper robotic adaptation could expand automation beyond large, standardized production lines. Smaller businesses and shorter production runs could become economical to automate, increasing productive capacity and potentially lowering prices. Benefits would be uneven: routine manual workers could face displacement even as production grows and new technical roles emerge.</p><p class="src">Source: <a href="https://www.worldbank.org/en/region/eap/publication/future-jobs" target="_blank" rel="noopener">World Bank</a></p></article>
+    <article class="tile"><h4>Factories and warehouses</h4><p>Specialized machines should remain strongest where tasks are repetitive and throughput matters most. Humanoids may be competitive where frequent task-switching and compatibility with human-designed workstations outweigh their mechanical complexity. Modular robots occupy the middle: specialized performance with lower costs of adapting to changing products, layouts, and payloads.</p></article>
+    <article class="tile"><h4>Agriculture and small businesses</h4><p>Task-specific machines are attractive when their bodies and tools can match particular crops or workflows. However, seasonality, environmental variation, and limited operating hours can weaken the economics. Leasing and reusable equipment could make automation accessible without requiring each business to purchase a permanent custom system.</p></article>
+    <article class="tile"><h4>Homes</h4><p>There is unlikely to be one winning form. Dedicated appliances remain attractive for frequent, narrow tasks, while humanoids or wheeled manipulators could handle broader assistance. Low utilization and highly variable environments make general household robotics a harder economic problem than continuous industrial work.</p></article>
+    <article class="tile"><h4>Adoption sequence</h4><p>Further automation will likely begin with bounded tasks such as material handling, machine tending, palletizing, and standardized packing. Variable assembly, delicate harvesting, and broader household work become more attractive as perception, manipulation, and recovery improve. These transitions will happen task by task; there is no universal date when specialized robots make humanoids uneconomical.</p></article>
+    <article class="tile"><h4>Unit economics</h4><p>The relevant comparison is cost per successful unit of work, including equipment, installation, training, financing, maintenance, downtime, and human intervention. Illustratively, a system costing $30,000 annually and producing 5,000 human-equivalent productive hours costs $6 per equivalent hour; at 1,000 hours, it costs $30. Adoption in lower-wage markets therefore requires greater utilization, lower costs, or additional quality and productivity advantages.</p></article>
+    <article class="tile"><h4>Our place in this market</h4><p>The proposed startup targets applications where conventional customization is expensive but a general-purpose robot provides unnecessary capabilities. Standardized components and reusable RL policies reduce the cost of configuring specialized machines. The framework can extend across industries through different assemblies, although each application still requires suitable hardware and validation.</p></article>
+    <article class="tile"><h4>Business model</h4><p>Customers pay an implementation fee for configuration, training, installation, and validation, followed by a recurring fee for deployed robots, component leasing, software, and service. This lowers customer upfront investment. Positive unit economics depend on those payments covering equipment financing, adaptation, maintenance, and support, not simply on using a subscription model.</p></article>
+    <article class="tile"><h4>Scale and resource efficiency</h4><p>Common modules create manufacturing economies of scale, while shared learning reduces repeated development work. Returned components can be refurbished and redeployed when doing so costs less than replacement. This increases hardware utilization and reduces demand for new motors and magnets, easing (but not eliminating) exposure to critical-material constraints.</p><p class="src">Source: <a href="https://www.iea.org/reports/rare-earth-elements/executive-summary" target="_blank" rel="noopener">IEA</a></p></article>
+  </div>
+</section>
+
+<!-- 8 · IMPACT -->
+<section class="slide" id="impact" style="--pin:3" data-label="Impact">
+ <div class="stage">
+  <div class="card" data-in="0" data-out=".62">
+    <p class="qtag">Impact</p>
+    <p class="txt">Our model will dramatically boost manufacturing capability, especially domestically. This enables the country, for the first time regarding matters that are not related to national security, to circumvent the recent crisis regarding cost of labor in the US. Our priorities include replacing or assisting with dangerous manufacturing and first-response jobs.</p>
+    <p class="txt">Ultimately, we also believe that we will enable new innovations. Since humanoid robots simply match human capabilities, while our robots exceed human capabilities, we aim to push the frontier of what is possible through engineering.</p>
+    <p class="txt">In terms of scale, we also foresee a recursive element. Implementing our own robots in order to optimize our manufacturing process will improve our efficiency.</p>
+  </div>
+  <div class="closer" data-in=".66">
+    <p class="qtag">Our vision</p>
+    <p class="txt">We believe in a world where we've created a pipeline to generalize the creation of task-specific robots, for any task. Task-specific robots are positioned to solve any automatable challenge; world models and compute-enhanced physics engines solve our data gap, and we use RL and AGI pipelines to create optimized robot designs that can do any task.</p>
+    <p class="txt">These robots are orderable for manufacturing, small businesses, daily life, defense, and more. At scale, task-specific robots automate tasks faster and cheaper than human labor, pushing the United States above China in the race for domestic manufacturing.</p>
+  </div>
+ </div>
+</section>
+
+</main>
+<div id="nogl" hidden>3D view unavailable in this browser. The story still reads top to bottom.</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+/* ---------- utilities ---------- */
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const seg=(p,a,b)=>clamp((p-a)/((b-a)||1e-6));
+const ss=t=>t*t*(3-2*t);
+const REDUCED=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+/* ---------- DOM: sections + reveal system ---------- */
+const sections=[...document.querySelectorAll('.slide,.read')];
+const N=sections.length;
+const fxEls=sections.map(sec=>{
+  const list=[];
+  sec.querySelectorAll('[data-in]').forEach(el=>{
+    const d=el.dataset;
+    list.push({el,inp:parseFloat(d.in),out:d.out!==undefined?parseFloat(d.out):9,cls:'on',last:null});
+    el.classList.add('fx');
+  });
+  sec.querySelectorAll('[data-on]').forEach(el=>{
+    const d=el.dataset;list.push({el,inp:parseFloat(d.on),out:9,cls:d.cls||'on',last:null});
+  });
+  return list;
+});
+function applyFx(i,p){
+  for(const o of fxEls[i]){const v=(p>=o.inp&&p<o.out);if(v!==o.last){o.el.classList.toggle(o.cls,v);o.last=v;}}
+}
+
+/* beat index: lights the current beat in each list */
+let beatLists=[];
+function initBeats(){beatLists=[...document.querySelectorAll('.beats')].map(ol=>({sec:sections.indexOf(ol.closest('.slide')),
+  marks:ol.dataset.marks.split(',').map(Number),lis:[...ol.querySelectorAll('li[data-b]')],last:-2}));}
+function updBeats(){
+  for(const L of beatLists){const p=progress[L.sec];
+    let b=-1;L.marks.forEach((m,k)=>{if(p>=m)b=k;});
+    if(b===L.last)continue;L.last=b;
+    L.lis.forEach((li,k)=>{li.classList.toggle('on',k===b);li.classList.toggle('done',k<b);});}
+}
+
+/* rail */
+const rail=document.getElementById('rail');
+const railBtns=sections.map(s=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-label',s.dataset.label);
+  const sp=document.createElement('span');sp.textContent=s.dataset.label;b.appendChild(sp);
+  b.addEventListener('click',()=>goTo(s));rail.appendChild(b);return b;});
+function goTo(sec){const top=sec.getBoundingClientRect().top+scrollY;window.scrollTo({top:top+2,behavior:REDUCED?'auto':'smooth'});}
+
+/* ---------- scroll mapping ---------- */
+let tops=[],hts=[],VH=innerHeight;
+const progress=new Array(N).fill(0);
+function layout(){VH=innerHeight;tops=sections.map(s=>s.getBoundingClientRect().top+scrollY);hts=sections.map(s=>s.offsetHeight);}
+layout();
+addEventListener('resize',()=>{layout();resize();});
+initBeats();
+let active=0,veilAmt=0;
+function computeScroll(){
+  const y=scrollY,mid=y+VH*.5;
+  let a=0;for(let i=0;i<N;i++)if(tops[i]<=mid)a=i;
+  for(let i=0;i<N;i++)progress[i]=seg(y,tops[i],tops[i]+Math.max(hts[i]-VH,1));
+  active=a;
+  const dPrev=(mid-tops[a])/VH, dNext=a<N-1?(tops[a+1]-mid)/VH:9;
+  veilAmt=clamp(1-Math.min(a>0?dPrev:9,dNext)/.32);
+}
+const hint=document.getElementById('hint');
+let lastActive=-1;
+function overlays(){
+  computeScroll();const y=scrollY;
+  for(let i=0;i<N;i++){if(tops[i]+hts[i]>y-VH*.2&&tops[i]<y+VH*1.2)applyFx(i,progress[i]);}
+  updBeats();
+  if(active!==lastActive){railBtns.forEach((b,k)=>b.classList.toggle('on',k===active));lastActive=active;}
+  hint.style.opacity=y<VH*.15?1:0;
+}
+
+/* ---------- THREE ---------- */
+let renderer,scene,camera,hemi,key,rim;
+if(typeof THREE==='undefined'){document.getElementById('nogl').hidden=false;
+  (function loop(){overlays();requestAnimationFrame(loop);})();return;}
+try{renderer=new THREE.WebGLRenderer({canvas:document.getElementById('gl'),antialias:true,alpha:true,powerPreference:'high-performance'});}
+catch(e){renderer=null;document.getElementById('nogl').hidden=false;}
+
+const C={body:0xc8d0e0,act:0xFF6B35,sens:0x3DDCFF,struct:0x8892B0,terrain:0x2E3A59,terrain2:0x3D4F7A,fail:0xFF3B5C,pass:0x4ADE80,plant:0x3f8f5a,berry:0xe23b4a,dark:0x2a334f,gold:0xF5C451};
+const _mc={};
+function M(color,o){const k=color+'|'+(o?JSON.stringify(o):'');if(!_mc[k])_mc[k]=new THREE.MeshStandardMaterial(Object.assign({color,flatShading:true,roughness:.82,metalness:.05},o||{}));return _mc[k];}
+const _wc={};
+function W(color=C.sens,op=.55){const k=color+'|'+op;if(!_wc[k])_wc[k]=new THREE.MeshBasicMaterial({color,wireframe:true,transparent:true,opacity:op});return _wc[k];}
+function bx(w,h,d,m){return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);}
+function cyl(r1,r2,h,s,m){return new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,s),m);}
+function ico(r,m,det=0){return new THREE.Mesh(new THREE.IcosahedronGeometry(r,det),m);}
+function roundRect(x,X,Y,w,h,r){x.beginPath();x.moveTo(X+r,Y);x.lineTo(X+w-r,Y);x.quadraticCurveTo(X+w,Y,X+w,Y+r);x.lineTo(X+w,Y+h-r);x.quadraticCurveTo(X+w,Y+h,X+w-r,Y+h);x.lineTo(X+r,Y+h);x.quadraticCurveTo(X,Y+h,X,Y+h-r);x.lineTo(X,Y+r);x.quadraticCurveTo(X,Y,X+r,Y);x.closePath();}
+function label(text,o={}){
+  const fs=o.fs||34,pad=o.pad??16;const font=`500 ${fs}px "IBM Plex Mono", ui-monospace, monospace`;
+  const c=document.createElement('canvas');const x=c.getContext('2d');x.font=font;
+  const w=Math.ceil(x.measureText(text).width)+pad*2,h=Math.ceil(fs+pad*1.3);
+  c.width=w;c.height=h;x.font=font;
+  x.fillStyle='rgba(11,16,32,0.82)';roundRect(x,1,1,w-2,h-2,6);x.fill();x.lineWidth=2;x.strokeStyle=o.border||'rgba(61,220,255,0.65)';x.stroke();
+  x.fillStyle=o.color||'#E8ECF6';x.textBaseline='middle';x.fillText(text,pad,h/2+1);
+  const tex=new THREE.CanvasTexture(c);tex.minFilter=THREE.LinearFilter;tex.generateMipmaps=false;
+  const m=new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:false});
+  const s=new THREE.Sprite(m);const k=o.scale||.006;s.scale.set(w*k,h*k,1);s.renderOrder=10;return s;
+}
+const ORANGE_LABEL={color:'#ffb08f',border:'rgba(255,107,53,.8)'};
+function at(m,x,y,z){m.position.set(x,y,z);return m;}
+function setOp(obj,o){obj.material.opacity=o;obj.visible=o>.005;}
+function island(r=3.4,col=C.terrain){const g=new THREE.Group();
+  const top=cyl(r,r*.96,.35,6,M(col));top.position.y=-.175;g.add(top);
+  const rim2=cyl(r*1.001,r*1.001,.06,6,M(0x4a5a8c));rim2.position.y=-.03;g.add(rim2);
+  const under=new THREE.Mesh(new THREE.ConeGeometry(r*.92,r*.9,6),M(0x1a2238));under.rotation.x=Math.PI;under.position.y=-.35-r*.45;g.add(under);return g;}
+
+/* people, humanoids and buildings for the city scenes */
+function person(col=0x7a86a8,o={}){const g=new THREE.Group();
+  const legs=bx(.22,.5,.14,M(0x34405f));legs.position.y=.25;const torso=bx(.32,.45,.2,M(col));torso.position.y=.72;
+  const head=ico(.12,M(0xe0b896));head.position.y=1.06;g.add(legs,torso,head);
+  if(o.phone){const ph=bx(.07,.12,.02,M(C.sens,{emissive:C.sens,emissiveIntensity:.9}));ph.position.set(.08,.9,.16);g.add(ph);g.userData.phone=ph;}
+  return g;}
+function humanoid(){const g=new THREE.Group();const mt=M(C.body,{metalness:.3,roughness:.5});const P={};
+  const add=(k,m,x,y,z)=>{m.position.set(x,y,z);g.add(m);P[k]=m;};
+  add('legL',bx(.12,.62,.14,mt),-.09,.31,0);add('legR',bx(.12,.62,.14,mt),.09,.31,0);
+  add('hip',bx(.3,.1,.18,M(C.act)),0,.66,0);add('torso',bx(.38,.5,.22,mt),0,.98,0);
+  add('head',bx(.2,.22,.2,M(C.dark)),0,1.38,0);add('visor',bx(.16,.05,.02,M(C.sens,{emissive:C.sens,emissiveIntensity:.9})),0,1.4,.11);
+  add('armL',bx(.09,.5,.1,mt),-.26,.98,0);add('armR',bx(.09,.5,.1,mt),.26,.98,0);
+  g.userData.P=P;return g;}
+function WN(color=C.sens,op=.55){return new THREE.MeshBasicMaterial({color,wireframe:true,transparent:true,opacity:op});}
+/* humanoid with its own materials and remembered part positions, so it can be exploded */
+function humanoidX(mat,own){const g=new THREE.Group();const MM=own?((c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,flatShading:true,roughness:.82,metalness:.05},o||{}))):M;
+  const mt=mat||MM(C.body,{metalness:.3,roughness:.5});const P={};
+  const add=(k,m,x,y,z)=>{m.position.set(x,y,z);m.userData.home=m.position.clone();g.add(m);P[k]=m;};
+  add('legL',bx(.12,.62,.14,mt),-.09,.31,0);add('legR',bx(.12,.62,.14,mt),.09,.31,0);
+  add('hip',bx(.3,.1,.18,mat||MM(C.act)),0,.66,0);add('torso',bx(.38,.5,.22,mt),0,.98,0);
+  add('head',bx(.2,.22,.2,mat||MM(C.dark)),0,1.38,0);add('visor',bx(.16,.05,.02,mat||MM(C.sens,{emissive:C.sens,emissiveIntensity:.9})),0,1.4,.11);
+  add('armL',bx(.09,.5,.1,mt),-.26,.98,0);add('armR',bx(.09,.5,.1,mt),.26,.98,0);
+  g.userData.P=P;return g;}
+function stripIsland(L,Wd,col=C.terrain){const g=new THREE.Group();
+  const top=bx(L,.35,Wd,M(col));top.position.y=-.175;g.add(top);
+  const rim2=bx(L+.02,.06,Wd+.02,M(0x4a5a8c));rim2.position.y=-.03;g.add(rim2);
+  const under=bx(L*.94,.9,Wd*.8,M(0x1a2238));under.position.y=-.8;g.add(under);return g;}
+function walk(h,t,amp=.35){const P=h.userData.P,sw=Math.sin(t)*amp;P.legL.rotation.x=sw;P.legR.rotation.x=-sw;P.armL.rotation.x=-sw*.8;P.armR.rotation.x=sw*.8;}
+function building(w,h,d,r){const g=new THREE.Group();
+  const b=bx(w,h,d,M([0x2a3352,0x323d62,0x262f4f][Math.floor(r()*3)]));b.position.y=h/2;g.add(b);
+  const wc=r()<.6?0xFFB547:0x9fe9ff;const winM=M(wc,{emissive:wc,emissiveIntensity:.75});
+  const rows=Math.max(1,Math.floor((h-.2)/.36));
+  for(let k=0;k<rows;k++){if(r()<.75){const st=bx(w*.72,.07,.01,winM);st.position.set(0,.28+k*.36,d/2+.006);g.add(st);}}
+  if(r()<.35){const cap=bx(w*.5,.12,d*.5,M(0x4a5a8c));cap.position.y=h+.06;g.add(cap);}
+  return g;}
+
+/* modular robots built from bank parts */
+function arm(o={}){
+  const g=new THREE.Group();const L1=o.L1||1.0,L2=o.L2||.9;const parts=[];
+  const add=(par,mesh)=>{par.add(mesh);parts.push(mesh);return mesh;};
+  if(o.base==='rail'){const r=add(g,bx(2.6,.06,.22,M(C.struct)));r.position.y=.03;}
+  const base=add(g,bx(.6,.26,.5,M(C.struct)));base.position.y=.19;
+  if(o.base==='wheels'){for(const sx of[-.24,.24])for(const sz of[-.22,.22]){const w=add(g,cyl(.1,.1,.06,8,M(0x222a40)));w.rotation.x=Math.PI/2;w.position.set(sx,.1,sz);}}
+  const core=add(g,bx(.34,.14,.3,M(C.body)));core.position.y=.39;
+  const j1=new THREE.Group();j1.position.y=.46;g.add(j1);
+  add(j1,cyl(.13,.13,.12,8,M(C.act)));
+  const j2=new THREE.Group();j2.position.y=.08;j1.add(j2);
+  const a2=add(j2,cyl(.09,.09,.22,8,M(C.act)));a2.rotation.x=Math.PI/2;
+  const l1=add(j2,bx(.11,L1,.11,M(C.body)));l1.position.y=L1/2;
+  const j3=new THREE.Group();j3.position.y=L1;j2.add(j3);
+  const a3=add(j3,cyl(.08,.08,.2,8,M(C.act)));a3.rotation.x=Math.PI/2;
+  const l2=add(j3,bx(.1,L2,.1,M(C.body)));l2.position.y=L2/2;
+  const j4=new THREE.Group();j4.position.y=L2;j3.add(j4);
+  const a4=add(j4,cyl(.065,.065,.14,8,M(C.act)));a4.rotation.x=Math.PI/2;
+  const gr=new THREE.Group();gr.position.y=.1;j4.add(gr);
+  if(o.grip==='suction'){add(gr,cyl(.06,.1,.12,8,M(0x222a40)));}
+  else if(o.grip==='parallel'){const f1=add(gr,bx(.03,.16,.08,M(C.struct)));f1.position.set(-.06,.06,0);const f2=add(gr,bx(.03,.16,.08,M(C.struct)));f2.position.set(.06,.06,0);}
+  else{for(let k=0;k<3;k++){const f=add(gr,ico(.05,M(0xffb38f)));const a=k*2.094;f.position.set(Math.cos(a)*.06,.07,Math.sin(a)*.06);}}
+  const cm=add(j4,bx(.08,.06,.06,M(C.sens,{emissive:C.sens,emissiveIntensity:.8})));cm.position.set(0,.02,.09);
+  if(o.s)g.scale.setScalar(o.s);
+  const rig={g,j1,j2,j3,j4,gr,parts,solid:parts.map(p=>p.material),isWire:false};
+  rig.wire=(on,mat)=>{if(on===rig.isWire)return;rig.isWire=on;parts.forEach((p,i)=>p.material=on?(mat||W()):rig.solid[i]);};
+  return rig;}
+function pose(r,a1,a2,a3,a4){r.j1.rotation.y=a1;r.j2.rotation.z=a2;r.j3.rotation.z=a3;r.j4.rotation.z=a4;}
+function pickPose(ph){const r=Math.sin(ph*Math.PI);return [.25+.55*r,.9+.7*r,.4+.3*r];}
+function miniBot(cfg,mat){
+  const g=new THREE.Group();const parts={};const mm=c=>mat||M(c);
+  if(cfg.base==='rail'){parts.rail=bx(1.0,.04,.1,mm(C.struct));parts.rail.position.y=.02;g.add(parts.rail);}
+  parts.base=bx(.32,.14,.28,mm(C.struct));parts.base.position.y=.11;g.add(parts.base);
+  if(cfg.base==='wheels'){for(const sx of[-.13,.13]){const w=cyl(.06,.06,.32,8,mm(0x222a40));w.rotation.x=Math.PI/2;w.position.set(sx,.06,0);g.add(w);}}
+  if(cfg.base==='legs'){parts.legs=[];for(let k=0;k<4;k++){const l=bx(.04,.2,.04,mm(C.struct));l.position.set(k<2?-.12:.12,.02,k%2?-.1:.1);g.add(l);parts.legs.push(l);}parts.base.position.y=.16;}
+  const j1=cyl(.07,.07,.07,8,mm(C.act));j1.position.y=.22;g.add(j1);
+  const L1=cfg.L1||.45,L2=cfg.L2||.4;
+  const l1=bx(.06,L1,.06,mm(C.body));l1.position.set(0,.25+L1/2,0);g.add(l1);
+  const j2=cyl(.05,.05,.1,8,mm(C.act));j2.rotation.x=Math.PI/2;j2.position.y=.25+L1;g.add(j2);
+  const l2=bx(L2,.05,.05,mm(C.body));l2.position.set(-L2/2,.25+L1,0);g.add(l2);
+  const gx=-L2;let grip;
+  if(cfg.grip==='soft'){grip=ico(.06,mm(0xffb38f));}else if(cfg.grip==='suction'){grip=cyl(.03,.06,.07,8,mm(0x222a40));}else{grip=bx(.08,.08,.05,mm(C.struct));}
+  grip.position.set(gx,.2+L1,0);g.add(grip);
+  if(cfg.cam){const cam=bx(.05,.04,.04,mat||M(C.sens,{emissive:C.sens,emissiveIntensity:.8}));cam.position.set(gx+.05,.3+L1,.04);g.add(cam);}
+  g.userData.parts=parts;return g;}
+function retint(group,mat){group.traverse(o=>{if(o.isMesh)o.material=mat;});}
+function randCfg(r){return {base:['rail','wheels','legs'][Math.floor(r()*3)],grip:['soft','suction','parallel'][Math.floor(r()*3)],L1:.3+r()*.35,L2:.25+r()*.35,cam:r()<.7};}
+
+/* a small city: buildings on the edge, a ring road with people, humanoids and modular robots, optional work line */
+function town(o={}){const r=rng(o.seed||1);const R=o.r||6;const g=new THREE.Group();
+  if(o.island!==false)g.add(island(R,o.col||C.terrain));
+  const road=new THREE.Mesh(new THREE.RingGeometry(R*.4,R*.56,6,1),new THREE.MeshStandardMaterial({color:0x1a2238,flatShading:true,side:THREE.DoubleSide}));
+  road.rotation.x=-Math.PI/2;road.position.y=.006;g.add(road);
+  const nb=o.nb||14,tall=o.tall||2.2;
+  for(let k=0;k<nb;k++){const a=k/nb*Math.PI*2+(r()-.5)*.2,rad=R*(.72+r()*.12);
+    const bd=building(.5+r()*.45,.6+r()*tall,.5+r()*.35,r);bd.position.set(Math.cos(a)*rad,0,Math.sin(a)*rad);bd.rotation.y=-a+Math.PI/2;g.add(bd);}
+  const walkers=[];const nw=o.nw||14;
+  for(let k=0;k<nw;k++){
+    const kind=(o.bots&&k%3===2)?'bot':(k%2===0?'hum':'person');
+    let obj;
+    if(kind==='bot'){obj=miniBot({base:'wheels',grip:['soft','suction','parallel'][k%3],L1:.35,L2:.3,cam:true});obj.scale.setScalar(1.5);}
+    else if(kind==='hum'){obj=humanoid();obj.scale.setScalar(.68);}
+    else{obj=person([0x7a86a8,0x8a96b8,0x6d7aa0][k%3]);obj.scale.setScalar(.82);}
+    g.add(obj);walkers.push({obj,kind,a0:r()*Math.PI*2,sp:(r()<.5?-1:1)*(.08+r()*.07),rad:R*(.44+r()*.1),ph:r()*6});}
+  const movers=[];let line=null;
+  if(o.work){const lg=new THREE.Group();g.add(lg);
+    const conv=bx(R*.55,.26,.42,M(0x2a3352));conv.position.y=.13;lg.add(conv);
+    for(let k=0;k<5;k++){const tote=bx(.26,.16,.22,M([C.act,0x4a5a8c,C.body][k%3]));tote.position.y=.34;lg.add(tote);movers.push(tote);}
+    const w1=person(0x8a96b8);w1.position.set(-R*.12,0,.5);w1.rotation.y=Math.PI;lg.add(w1);
+    const rb=arm({base:null,L1:.5,L2:.45,grip:'suction',s:.7});rb.g.position.set(R*.12,0,.55);lg.add(rb.g);
+    line={len:R*.55,rb};}
+  return {g,walkers,movers,line};}
+function updTown(T,t){
+  T.walkers.forEach(w=>{const a=w.a0+t*w.sp;w.obj.position.set(Math.cos(a)*w.rad,0,Math.sin(a)*w.rad);
+    const dx=-Math.sin(a)*Math.sign(w.sp),dz=Math.cos(a)*Math.sign(w.sp);
+    w.obj.rotation.y=Math.atan2(dx,dz)+(w.kind==='bot'?Math.PI/2:0);
+    if(w.kind==='hum')walk(w.obj,t*6+w.ph,.3);else if(w.kind==='person')w.obj.position.y=Math.abs(Math.sin(t*6+w.ph))*.03;});
+  if(T.line){const L=T.line;T.movers.forEach((m,k)=>{m.position.x=-L.len/2+((t*.18+k/T.movers.length)%1)*L.len;});
+    pose(L.rb,Math.PI+Math.sin(t*1.2)*.8,...pickPose((t*.6)%1));}
+}
+
+let MX=0,MY=0,mx=0,my=0;
+addEventListener('pointermove',e=>{MX=(e.clientX/innerWidth-.5);MY=(e.clientY/innerHeight-.5);},{passive:true});
+function camPath(p,keys){
+  let i=0;for(let k=0;k<keys.length;k++)if(keys[k][0]<=p)i=k;
+  const a=keys[i],b=keys[Math.min(i+1,keys.length-1)];
+  const t=b[0]>a[0]?ss(clamp((p-a[0])/(b[0]-a[0]))):0;
+  const P=[0,1,2].map(j=>lerp(a[1][j],b[1][j],t)),T=[0,1,2].map(j=>lerp(a[2][j],b[2][j],t));
+  camera.position.set(P[0]+mx*.5,P[1]-my*.3,P[2]);camera.lookAt(T[0],T[1],T[2]);
+}
+
+const S=[];
+
+/* 0 · the bakery order: a compact robot packs boxes under the shelf, then its parts become a new machine */
+S[0]={fog:[0x1a2240,12,55],build(g){
+  g.add(island(4.4,C.terrain2));
+  const floor=bx(5.2,.04,3.6,M(0x3a4566));floor.position.set(0,.02,.2);g.add(floor);
+  const counter=bx(3.4,.9,.9,M(0x8a6a55));counter.position.set(0,.45,.4);g.add(counter);
+  const top=bx(3.5,.06,1,M(0xd9cbb8));top.position.set(0,.93,.4);g.add(top);
+  const shelf=bx(3.4,.06,.45,M(0xd9cbb8));shelf.position.set(0,1.75,.1);g.add(shelf);
+  for(const x of[-1.65,1.65]){const post=bx(.06,.85,.06,M(C.struct));post.position.set(x,1.33,.1);g.add(post);}
+  for(let k=0;k<11;k++){const pa=ico(.085,M(k%3?0xE8B07A:0xc9874a));pa.position.set(-1.45+k*.29,1.86,.1);pa.scale.y=.7;g.add(pa);}
+  for(let k=0;k<8;k++){const bl=bx(.5,.02,.42,M(0xc8a27a));bl.position.set(-1.3,.97+k*.025,.45);g.add(bl);}
+  const boxes=[];for(let k=0;k<12;k++){const b=bx(.28,.17,.24,M(0xf2e6d8));b.position.set(.95+(k%3)*.3,1.05+Math.floor(k/3)*.18,.45);b.visible=false;g.add(b);boxes.push(b);}
+  const rig=arm({base:'rail',L1:.42,L2:.38,grip:'soft',s:.9});rig.g.position.set(-.2,.96,.62);g.add(rig.g);
+  const owner=person(0x8a96b8,{phone:true});owner.position.set(-2.5,0,2);owner.rotation.y=Math.PI*.8;g.add(owner);
+  const bot2=miniBot({base:'wheels',L1:.42,L2:.36,grip:'suction',cam:true});bot2.visible=false;g.add(bot2);
+  const crate=bx(.24,.16,.2,M(C.act));crate.position.set(-.36,.5,0);bot2.add(crate);
+  const lab=label('SAME COMPONENTS, NEW JOB',ORANGE_LABEL);lab.position.set(0,3.2,0);g.add(lab);
+  this.o={rig,boxes,owner,bot2,lab};
+},update(p,t){
+  const o=this.o;
+  camPath(p,[[0,[-5,2.8,6],[-1.4,1,.4]],[.12,[-3.6,2.5,5.2],[-1,1,.4]],[.28,[-1.6,2.1,3.7],[-1,1.15,.4]],[.48,[-1.2,2.2,3.9],[-.8,1.15,.4]],
+    [.56,[3.4,3.6,7],[.6,.8,.6]],[.7,[3.8,3.8,7.4],[.8,.7,.8]],[1,[0,6.5,11.5],[0,.7,0]]]);
+  o.owner.userData.phone.material.emissiveIntensity=p<.2?.5+.5*Math.sin(t*6):.4;
+  // packing between the shelf and the box stack
+  if(p>.24&&p<.56){const ph=(t*.45)%1;const yaw=Math.sin(ph*Math.PI*2)*.9;pose(o.rig,yaw,...pickPose((ph*2)%1));}
+  else pose(o.rig,0,.3,.8,.4);
+  const n=Math.floor(seg(p,.28,.52)*12);o.boxes.forEach((b,k)=>b.visible=k<n);
+  // next week: the robot lifts away as wireframe and a different machine appears from the same parts
+  o.rig.wire(p>.55,W(C.sens,.6));
+  o.rig.g.position.y=.96+ss(seg(p,.55,.62))*1.4;o.rig.g.visible=p<.63;
+  const u=ss(seg(p,.6,.66));o.bot2.visible=u>.01;o.bot2.scale.setScalar(Math.max(u,1e-3)*1.8);
+  const a=t*.35;o.bot2.position.set(Math.cos(a)*2.9,0,Math.sin(a)*2.9);o.bot2.rotation.y=-a;
+  setOp(o.lab,seg(p,.58,.62)*(1-seg(p,.72,.76)));
+}};
+
+/* 1 · overview: a modular robot at work in a town that keeps moving around it */
+S[1]={fog:[0x141c36,14,60],build(g){
+  g.add(island(4,C.terrain2));
+  const conv=bx(4,.3,.6,M(0x2a3352));conv.position.set(0,.15,-.9);g.add(conv);
+  const totes=[];for(let k=0;k<6;k++){const tt=bx(.34,.2,.3,M([C.act,0x4a5a8c,C.body][k%3]));tt.position.set(0,.4,-.9);g.add(tt);totes.push(tt);}
+  const pallet=bx(.9,.1,.7,M(0x8a6a55));pallet.position.set(1.7,.05,.9);g.add(pallet);
+  const stack=[];for(let k=0;k<6;k++){const b=bx(.34,.2,.3,M(0x4a5a8c));b.position.set(1.5+(k%2)*.38,.2+Math.floor(k/2)*.21,.9);g.add(b);stack.push(b);}
+  const rig=arm({base:null,L1:.9,L2:.8,grip:'suction'});rig.g.position.set(.4,0,.1);g.add(rig.g);
+  const rover=miniBot({base:'wheels',L1:.4,L2:.35,grip:'parallel',cam:true});rover.scale.setScalar(1.8);g.add(rover);
+  const T=town({seed:5,r:6.5,nw:18,bots:true});T.g.position.set(0,-.6,-13);g.add(T.g);
+  this.o={totes,stack,rig,rover,T};
+},update(p,t){
+  const o=this.o;
+  const a=lerp(-.7,.5,p);camPath(p,[[0,[Math.sin(a)*7,3.2,Math.cos(a)*7],[0,.8,-.6]],[1,[Math.sin(a)*7,3.2,Math.cos(a)*7],[0,.8,-.6]]]);
+  o.totes.forEach((tt,k)=>{tt.position.x=-2+((t*.15+k/6)%1)*4;});
+  const ph=(t*.4)%1;pose(o.rig,lerp(-1.6,.9,ss(Math.abs(ph*2-1))),...pickPose((ph*2)%1));
+  const n=Math.floor((t*.4)%7);o.stack.forEach((b,k)=>b.visible=k<n);
+  const ra=t*.3;o.rover.position.set(Math.cos(ra)*3,0,Math.sin(ra)*3);o.rover.rotation.y=-ra;
+  updTown(o.T,t);
+}};
+
+/* 2 · premise: many simulated worlds, each with a different robot */
+S[2]={fog:[0x141c36,16,62],build(g){
+  const r=rng(12);const worlds=[];
+  const props=[
+    w=>{for(let k=0;k<3;k++){const row=bx(2,.16,.24,M(0x5b4a3a));row.position.set(0,.08,-.6+k*.6);w.add(row);for(let j=0;j<6;j++){const pl=ico(.1,M(j%3?C.plant:C.berry));pl.position.set(-.85+j*.34,.25,-.6+k*.6);w.add(pl);}}},
+    w=>{for(let k=0;k<2;k++){const sh=bx(1.6,1.1,.3,M(0x232c48));sh.position.set(0,.55,-.6+k*1.1);w.add(sh);}},
+    w=>{const c=bx(2,.22,.4,M(0x2a3352));c.position.y=.11;w.add(c);for(let k=0;k<3;k++){const b=bx(.22,.14,.2,M(C.act));b.position.set(-.6+k*.6,.29,0);w.add(b);}},
+    w=>{for(let k=0;k<5;k++){const rb=bx(.3+r()*.4,.15+r()*.4,.3+r()*.3,M(0x4a4e5e));rb.position.set((r()-.5)*1.8,.15,(r()-.5)*1.6);rb.rotation.y=r()*3;w.add(rb);}},
+    w=>{const pipe=cyl(.18,.18,2.2,10,M(0x8892B0,{metalness:.4}));pipe.rotation.z=Math.PI/2;pipe.position.y=.5;w.add(pipe);const v=cyl(.12,.12,.8,8,M(0x8892B0));v.position.set(.6,.6,0);w.add(v);},
+    w=>{const ct=bx(1.8,.6,.6,M(0x8a6a55));ct.position.y=.3;w.add(ct);}
+  ];
+  for(let i=0;i<9;i++){const w=new THREE.Group();const x=((i%3)-1)*4.4,z=(Math.floor(i/3)-1)*4.2;w.position.set(x,0,z);
+    w.add(island(1.8,[C.terrain,C.terrain2,0x34406a][i%3]));
+    const grid=cyl(1.82,1.82,.02,6,W(C.sens,.35));grid.position.y=.02;w.add(grid);
+    props[i%props.length](w);
+    const bots=[];for(let b=0;b<2;b++){const mb=miniBot(randCfg(r));mb.scale.setScalar(1.5);mb.position.set(b?.6:-.6,0,1);w.add(mb);bots.push(mb);}
+    g.add(w);worlds.push({w,bots,ph:r()*6});}
+  this.o={worlds};
+},update(p,t){
+  const o=this.o;
+  camPath(p,[[0,[0,10,14],[0,0,0]],[1,[3,12.5,15],[0,0,0]]]);
+  o.worlds.forEach((W0,i)=>{const u=ss(seg(p,.04+i*.05,.14+i*.05));W0.w.position.y=lerp(-8,0,u);W0.w.visible=u>.01;
+    W0.bots.forEach((b,k)=>{b.position.x=(k?.6:-.6)+Math.sin(t*.8+W0.ph+k*2)*.35;b.rotation.y=Math.sin(t*.5+k)*.8;});});
+}};
+
+/* 3 · simulation: parent configuration, hundreds of variants, constraint rejects, finalists train, a winner */
+S[3]={fog:[0x141c36,16,60],build(g){
+  const r=rng(31);
+  const ped=cyl(.6,.7,.16,6,M(0x4a5a8c));ped.position.set(0,.08,3);g.add(ped);
+  const parentCfg={base:'rail',grip:'soft',L1:.45,L2:.4,cam:true};
+  const parent=miniBot(parentCfg);parent.scale.setScalar(1.8);parent.position.set(0,.16,3);g.add(parent);
+  const floor=bx(10.5,.08,7.2,M(C.terrain));floor.position.set(0,-.04,-.4);g.add(floor);
+  const vars=[];const NV=48;
+  const idx=[...Array(NV).keys()];for(let i=NV-1;i>0;i--){const j=Math.floor(r()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}
+  const fin=new Set(idx.slice(0,5)),rejA=new Set(idx.slice(5,26));
+  let fi=0;
+  for(let k=0;k<NV;k++){const c=k%8,row=Math.floor(k/8);
+    const cfg=randCfg(r);const mb=miniBot(cfg,W(C.sens,.6));mb.scale.setScalar(1.3);
+    const home=new THREE.Vector3((c-3.5)*1.2,0,(row-2.5)*1.1-1.2);mb.position.copy(home);g.add(mb);
+    const v={mb,cfg,home,kind:fin.has(k)?'fin':(rejA.has(k)?'rejA':'rejB'),mat:null};
+    if(v.kind==='fin'){v.slot=new THREE.Vector3((fi-2)*1.5,0,1.1);v.fi=fi++;}
+    vars.push(v);}
+  const winner=vars.find(v=>v.kind==='fin'&&v.fi===2);
+  const solid=miniBot(winner.cfg);solid.scale.setScalar(1.6);solid.position.copy(winner.slot);solid.visible=false;g.add(solid);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(.55,.04,6,32),M(C.gold,{emissive:C.gold,emissiveIntensity:.9}));ring.rotation.x=Math.PI/2;ring.position.copy(winner.slot);ring.position.y=.05;ring.visible=false;g.add(ring);
+  const L={parent:label('PARENT CONFIGURATION'),rej:label('REJECTED: TORQUE, PAYLOAD, CONNECTOR LOAD',{color:'#ff8ca1',border:'rgba(255,59,92,.85)'}),
+    fin:label('FINALISTS'),win:label('WINNER',ORANGE_LABEL)};
+  L.parent.position.set(0,2.3,3);L.rej.position.set(2.2,2.4,-1.2);L.fin.position.set(0,2.4,1.1);L.win.position.set(winner.slot.x,2.4,winner.slot.z);
+  for(const k in L)g.add(L[k]);
+  this.o={parent,vars,winner,solid,ring,L};
+},update(p,t){
+  const o=this.o;
+  camPath(p,[[0,[0,2.8,7.4],[0,.8,2.6]],[.1,[0,7.5,10.5],[0,0,-.4]],[.46,[0,7.8,11],[0,0,-.4]],[.6,[0,4.4,8],[0,.6,1]],[.86,[0,3.4,6.6],[0,.6,1]],[1,[0,2.6,5.4],[0,.7,1.1]]]);
+  const wC=W(C.sens,.6),wR=W(C.fail,.75),wD=W(0x66729A,.25);
+  o.vars.forEach((v,k)=>{
+    const u=ss(seg(p,.1+k*.003,.16+k*.003));let s=1.3*u,y=0,mat=wC,vis=u>.01,pos=v.home;
+    if(v.kind==='rejA'&&p>.3){mat=wR;y=-1.4*ss(seg(p,.36,.44));vis=p<.45;}
+    if(v.kind==='rejB'&&p>.52){mat=wD;y=-1.4*ss(seg(p,.56,.62));vis=p<.63;}
+    if(v.kind==='fin'){const m=ss(seg(p,.6,.68));v.mb.position.lerpVectors(v.home,v.slot,m);
+      if(p>.68&&p<.88){y=Math.abs(Math.sin(t*4+v.fi))*.12;v.mb.rotation.y=Math.sin(t*2.5+v.fi)*.6;}
+      if(p>.88){mat=v===o.winner?wC:wD;vis=v!==o.winner;}}
+    else v.mb.position.copy(pos);
+    v.mb.position.y=y;v.mb.scale.setScalar(Math.max(s,1e-3));v.mb.visible=vis;
+    if(v.mat!==mat){retint(v.mb,mat);v.mat=mat;}
+  });
+  const w=p>.88;o.solid.visible=w;o.ring.visible=w;o.ring.rotation.z=t;
+  setOp(o.L.parent,1-seg(p,.12,.18));setOp(o.L.rej,seg(p,.3,.34)*(1-seg(p,.44,.48)));
+  setOp(o.L.fin,seg(p,.64,.68)*(1-seg(p,.86,.89)));setOp(o.L.win,seg(p,.88,.91));
+}};
+
+/* 4 · framework: the parts vocabulary on a turntable, then several different robots from the same parts */
+S[4]={fog:[0x141c36,12,48],build(g){
+  g.add(island(4,C.terrain2));
+  const turn=new THREE.Group();turn.position.y=1;g.add(turn);
+  const items=[];
+  const mk=(name,build)=>{const it=new THREE.Group();build(it);const l=label(name);l.position.y=.75;it.add(l);turn.add(it);items.push({it,l});};
+  mk('CORE',it=>{it.add(bx(.5,.3,.4,M(C.body)));const bt=bx(.3,.12,.2,M(C.pass,{emissive:C.pass,emissiveIntensity:.4}));bt.position.y=.21;it.add(bt);});
+  mk('JOINT',it=>{const j=cyl(.16,.16,.24,12,M(C.act));j.rotation.x=Math.PI/2;it.add(j);});
+  mk('STRUCTURAL LINK',it=>{it.add(bx(.9,.1,.1,M(C.body)));});
+  mk('LOCOMOTION',it=>{const w=cyl(.2,.2,.08,12,M(0x222a40));w.rotation.x=Math.PI/2;w.position.x=-.3;it.add(w);const l=bx(.06,.5,.06,M(C.struct));l.position.x=.25;it.add(l);const rl=bx(.8,.04,.12,M(C.struct));rl.position.y=-.3;it.add(rl);});
+  mk('END EFFECTOR',it=>{const pm=bx(.2,.08,.12,M(C.struct));it.add(pm);for(const x of[-.07,.07]){const f=bx(.04,.22,.08,M(C.struct));f.position.set(x,-.14,0);it.add(f);}});
+  mk('SENSOR',it=>{it.add(bx(.24,.16,.16,M(C.dark)));const ln=cyl(.05,.05,.04,10,M(C.sens,{emissive:C.sens,emissiveIntensity:1}));ln.rotation.x=Math.PI/2;ln.position.z=.09;it.add(ln);const ld=cyl(.07,.07,.08,10,M(0x8892B0));ld.position.y=.12;it.add(ld);});
+  items.forEach((o,k)=>{const a=k/items.length*Math.PI*2;o.it.position.set(Math.cos(a)*2.4,0,Math.sin(a)*2.4);o.a=a;});
+  const conn=new THREE.Group();const disc=cyl(.28,.28,.08,16,M(C.gold,{metalness:.5,roughness:.35}));conn.add(disc);
+  for(let k=0;k<4;k++){const pin=cyl(.03,.03,.12,6,M(0xE8ECF6));const a=k*Math.PI/2;pin.position.set(Math.cos(a)*.16,.08,Math.sin(a)*.16);conn.add(pin);}
+  const cl=label('UNIVERSAL CONNECTOR',ORANGE_LABEL);cl.position.y=.6;conn.add(cl);conn.position.y=1;g.add(conn);
+  const built=[{base:'wheels',grip:'parallel',L1:.5,L2:.45,cam:true},{base:'legs',grip:'soft',L1:.35,L2:.3,cam:true},{base:'rail',grip:'suction',L1:.6,L2:.5,cam:true}].map((cfg,k)=>{
+    const b=miniBot(cfg);b.scale.setScalar(2.2);b.position.set((k-1)*1.9,0,.4);b.visible=false;g.add(b);return b;});
+  this.o={turn,items,conn,cl,built};
+},update(p,t){
+  const o=this.o;
+  const a=lerp(.2,1.4,p);camPath(p,[[0,[Math.sin(a)*7.5,3.6,Math.cos(a)*7.5],[0,1,0]],[1,[Math.sin(a)*7.5,3.6,Math.cos(a)*7.5],[0,1,0]]]);
+  o.turn.rotation.y=t*.18;
+  const gone=ss(seg(p,.55,.68));
+  o.items.forEach((it,k)=>{it.it.position.y=Math.sin(t*1.2+k)*.08;it.it.scale.setScalar(Math.max(1-gone,1e-3));it.l.material.opacity=1-gone;it.it.rotation.y=-o.turn.rotation.y-it.a+Math.PI/2;});
+  o.conn.rotation.y=t*.5;o.conn.scale.setScalar(Math.max(1-gone,1e-3));setOp(o.cl,1-gone);
+  o.built.forEach((b,k)=>{const u=ss(seg(p,.62+k*.05,.7+k*.05));b.visible=u>.01;b.scale.setScalar(Math.max(u,1e-3)*2.2);b.rotation.y=Math.sin(t*.6+k)*.5;});
+}};
+
+/* 5 · manufacturing: CNC, molding and PCB lines feed parts to assembly; robots roll out */
+S[5]={fog:[0x141c36,14,55],build(g){
+  g.add(island(5,C.terrain2));
+  const mach=[];
+  const mkM=(x,name,build)=>{const m=new THREE.Group();m.position.set(x,0,-1.6);build(m);g.add(m);const l=label(name);l.position.set(x,2.3,-1.6);g.add(l);mach.push(m);};
+  mkM(-2.6,'CNC MACHINING',m=>{m.add(at(bx(1.2,1.1,1,M(0x323d62)),0,.55,0));const sp=cyl(.06,.06,.5,8,M(0xE8ECF6));sp.position.set(0,1.1,.2);m.add(sp);m.userData.sp=sp;
+    const win=bx(.8,.4,.02,M(C.sens,{emissive:C.sens,emissiveIntensity:.35,transparent:true,opacity:.6}));win.position.set(0,.6,.51);m.add(win);});
+  mkM(0,'INJECTION MOLDING',m=>{m.add(at(bx(1.6,.7,.8,M(0x2a3352)),0,.35,0));const hop=new THREE.Mesh(new THREE.ConeGeometry(.25,.5,8),M(0x8892B0));hop.rotation.x=Math.PI;hop.position.set(-.4,1,0);m.add(hop);});
+  mkM(2.6,'PCB ASSEMBLY',m=>{m.add(at(bx(1.4,.5,.8,M(0x262f4f)),0,.25,0));
+    for(let k=0;k<4;k++){const ch=bx(.2,.03,.2,M(C.pass,{emissive:C.pass,emissiveIntensity:.6}));ch.position.set(-.45+k*.3,.52,0);m.add(ch);}});
+  const conv=bx(6.4,.26,.5,M(0x2a3352));conv.position.set(0,.13,.2);g.add(conv);
+  const parts=[];const cols=[C.act,C.struct,C.body,C.sens,C.gold];
+  for(let k=0;k<12;k++){const pp=k%3===0?cyl(.08,.08,.12,8,M(cols[k%5])):bx(.16,.1,.16,M(cols[k%5]));pp.position.set(0,.34,.2);g.add(pp);parts.push(pp);}
+  const asm=arm({base:null,L1:.7,L2:.6,grip:'parallel'});asm.g.position.set(3.6,0,-.4);g.add(asm.g);
+  const worker=person(0x8a96b8);worker.position.set(-.6,0,1.1);worker.rotation.y=Math.PI;g.add(worker);
+  const wl=label('SKILLED ASSEMBLY',ORANGE_LABEL);wl.position.set(-.6,1.7,1.1);g.add(wl);
+  const out=[];for(let k=0;k<3;k++){const b=miniBot(randCfg(rng(70+k)));b.scale.setScalar(1.7);g.add(b);out.push(b);}
+  this.o={mach,parts,asm,worker,out};
+},update(p,t){
+  const o=this.o;
+  camPath(p,[[0,[-3.5,3.4,6.5],[-1.2,.8,-.8]],[.5,[0,4,7.4],[0,.7,-.4]],[1,[4.6,3.4,6.4],[2.4,.7,0]]]);
+  o.mach[0].userData.sp.position.y=1.1+Math.sin(t*6)*.08;
+  o.parts.forEach((pp,k)=>{pp.position.x=-3.1+((t*.22+k/12)%1)*6.2;pp.rotation.y=t+k;});
+  pose(o.asm,Math.sin(t*1.4)*.9,...pickPose((t*.7)%1));
+  o.worker.rotation.y=Math.PI+Math.sin(t*1.5)*.2;
+  o.out.forEach((b,k)=>{const ph=(t*.12+k/3)%1;b.position.set(3.8+ph*.6,0,.9+ph*3.2);b.rotation.y=-Math.PI/2;b.visible=ph<.92;});
+}};
+
+/* 6 · how it works: the town, now with modular robots among people (dimmed behind reading cards) */
+S[6]={fog:[0x141c36,12,48],veil:()=>.62,build(g){const T=town({seed:41,r:6.5,nw:20,bots:true,work:true});g.add(T.g);this.o={T};},
+update(p,t){const a=lerp(0,.8,p)+t*.02;camPath(0,[[0,[Math.sin(a)*12,7,Math.cos(a)*12],[0,0,0]]]);updTown(this.o.T,t);}};
+
+/* 7 · economics: same idea, a different neighborhood */
+S[7]={fog:[0x141c36,12,48],veil:()=>.62,build(g){const T=town({seed:57,r:6.5,nw:20,bots:true,work:true});g.add(T.g);this.o={T};},
+update(p,t){const a=lerp(2,2.8,p)+t*.02;camPath(0,[[0,[Math.sin(a)*12,7,Math.cos(a)*12],[0,0,0]]]);updTown(this.o.T,t);}};
+
+/* 8 · impact: different robots across manufacturing, small business, daily life and defense */
+S[8]={fog:[0x141c36,18,80],build(g){
+  const sites=[];
+  const mk=(x,z,name,build)=>{const s=new THREE.Group();s.position.set(x,0,z);s.add(island(2.4,C.terrain2));build(s);g.add(s);const l=label(name,ORANGE_LABEL);l.position.set(x,2.8,z);g.add(l);sites.push(s);};
+  mk(-4.5,-3,'MANUFACTURING',s=>{const c=bx(3,.26,.45,M(0x2a3352));c.position.y=.13;s.add(c);const a=arm({base:null,L1:.6,L2:.5,grip:'parallel',s:.9});a.g.position.set(0,0,.7);s.add(a.g);s.userData.rig=a;});
+  mk(4.5,-3,'SMALL BUSINESSES',s=>{const ct=bx(2.2,.8,.7,M(0x8a6a55));ct.position.y=.4;s.add(ct);const a=arm({base:'rail',L1:.4,L2:.35,grip:'soft',s:.7});a.g.position.set(0,.82,.1);s.add(a.g);s.userData.rig=a;});
+  mk(-4.5,3.6,'DAILY LIFE',s=>{for(let k=0;k<3;k++){const b=building(.6,.8+k*.4,.6,rng(90+k));b.position.set(-.9+k*.9,0,-.8);s.add(b);}const m=miniBot({base:'wheels',grip:'parallel',L1:.4,L2:.35,cam:true});m.scale.setScalar(1.8);s.add(m);s.userData.bot=m;});
+  mk(4.5,3.6,'DEFENSE',s=>{const r=rng(5);for(let k=0;k<6;k++){const rb=bx(.3+r()*.4,.2+r()*.4,.3+r()*.3,M(0x4a4e5e));rb.position.set((r()-.5)*2.4,.15,(r()-.5)*2);rb.rotation.y=r()*3;s.add(rb);}
+    const m=miniBot({base:'legs',grip:'suction',L1:.45,L2:.4,cam:true});m.scale.setScalar(2);s.add(m);s.userData.bot=m;});
+  const T=town({seed:77,r:3,island:true,nb:8,tall:1.2,nw:8,bots:true});T.g.position.set(0,-.3,.3);g.add(T.g);
+  this.o={sites,T};
+},update(p,t){
+  const o=this.o;
+  camPath(p,[[0,[0,5,10],[0,.5,0]],[.6,[0,9,15],[0,0,0]],[1,[0,13,19],[0,0,0]]]);
+  o.sites.forEach((s,k)=>{if(s.userData.rig)pose(s.userData.rig,Math.sin(t*1.3+k)*.9,...pickPose((t*.6+k*.3)%1));
+    if(s.userData.bot){const a=t*.4+k;s.userData.bot.position.set(Math.cos(a)*1.3,0,Math.sin(a)*1.1);s.userData.bot.rotation.y=-a;}});
+  updTown(o.T,t);
+}};
+
+/* 3b · RL environment: state = configuration, action = add a sensor or actuator, reward = task performance in sim */
+const RL={fog:[0x141c36,12,50],build(g){
+  g.add(island(4.2,C.terrain2));
+  // task: reach the target on the shelf
+  const post=bx(.08,1.5,.08,M(C.struct));post.position.set(1.7,.75,-.1);g.add(post);
+  const plat=bx(.8,.06,.6,M(0xd9cbb8));plat.position.set(1.7,1.5,-.1);g.add(plat);
+  const ballM=new THREE.MeshStandardMaterial({color:C.act,emissive:C.act,emissiveIntensity:.4,flatShading:true});
+  const ball=ico(.13,ballM,1);ball.position.set(1.5,1.66,-.1);g.add(ball);
+  // the robot, grown one part at a time
+  const R=new THREE.Group();R.position.set(-.6,0,0);g.add(R);
+  const base=bx(.6,.2,.5,M(C.struct));base.position.y=.2;R.add(base);
+  for(const sx of[-.22,.22])for(const sz of[-.22,.22]){const w=cyl(.1,.1,.06,8,M(0x222a40));w.rotation.x=Math.PI/2;w.position.set(sx,.1,sz);R.add(w);}
+  const core=bx(.36,.22,.32,M(C.body));core.position.y=.41;R.add(core);
+  const P1=new THREE.Group();P1.position.y=.56;R.add(P1);
+  const a1=cyl(.12,.12,.2,10,M(C.act));a1.rotation.x=Math.PI/2;P1.add(a1);
+  const l1=bx(.1,.8,.1,M(C.body));l1.position.y=.4;P1.add(l1);
+  const E=new THREE.Group();E.position.y=.8;P1.add(E);
+  const a2=cyl(.09,.09,.18,10,M(C.act));a2.rotation.x=Math.PI/2;E.add(a2);
+  const l2=bx(.09,.7,.09,M(C.body));l2.position.y=.35;E.add(l2);
+  const grip=new THREE.Group();grip.position.y=.72;E.add(grip);
+  for(const x of[-.06,.06]){const f=bx(.03,.16,.08,M(C.struct));f.position.set(x,.06,0);grip.add(f);}
+  const cam=bx(.14,.1,.1,M(C.sens,{emissive:C.sens,emissiveIntensity:.9}));cam.position.set(.12,.58,0);R.add(cam);
+  const extra=new THREE.Group();extra.position.set(0,.5,-.2);extra.rotation.x=-.6;R.add(extra);
+  const ea=cyl(.1,.1,.16,10,M(C.act));ea.rotation.z=Math.PI/2;extra.add(ea);
+  const el=bx(.1,.9,.1,M(C.body));el.position.y=.45;extra.add(el);
+  const sets=[[a1,l1],[a2,l2],[cam],[extra],[grip]];
+  const meshes=[];R.traverse(o=>{if(o.isMesh)meshes.push({o,m:o.material});});
+  // reward meter
+  const barM=new THREE.MeshStandardMaterial({color:C.pass,emissive:C.pass,emissiveIntensity:.5,flatShading:true});
+  const bar=bx(.3,1,.3,barM);bar.position.set(3,0,.4);g.add(bar);
+  const frame=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(.34,2.2,.34)),new THREE.LineBasicMaterial({color:0x9AA6C4}));frame.position.set(3,1.1,.4);g.add(frame);
+  const rl=label('REWARD');rl.position.set(3,2.55,.4);g.add(rl);
+  const acts=['ACTION: ADD JOINT AND LINK','ACTION: ADD SECOND LINK','ACTION: ADD CAMERA','ACTION: ADD SECOND ARM','ACTION: ADD GRIPPER'].map(s=>{const l=label(s,ORANGE_LABEL);l.position.set(-.6,2.7,0);g.add(l);return l;});
+  const test=label('TESTING IN SIMULATION');test.position.set(-.6,2.7,0);g.add(test);
+  const drop=label('REWARD DROPPED: REMOVE ARM',{color:'#ff8ca1',border:'rgba(255,59,92,.85)'});drop.position.set(-.6,2.7,0);g.add(drop);
+  const pass=label('TASK PASSED',{color:'#bff5d0',border:'rgba(74,222,128,.85)'});pass.position.set(-.6,2.7,0);g.add(pass);
+  this.o={R,P1,E,sets,meshes,ball,ballM,bar,barM,acts,test,drop,pass,rows:[...document.querySelectorAll('#rl .defs div')],last:''};
+},update(p,t){
+  const o=this.o,s0=.08,L=.17;
+  camPath(p,[[0,[.4,3,7.4],[-1,1,0]],[1,[-.6,2.6,6.4],[-1.1,1,0]]]);
+  const k=p<s0?-1:Math.min(4,Math.floor((p-s0)/L)),u=k<0?0:clamp((p-s0-k*L)/L,0,1.6);
+  const phase=k<0?'state':(u<.3?'action':(u<.9?'reward':'state'));
+  // parts: earlier actions kept, current one grows in; the second arm is removed after its test
+  o.sets.forEach((set,i)=>{let s=i<k?1:(i===k?ss(seg(u,.02,.25)):0);
+    if(i===3&&(k>3||(k===3&&u>.86)))s=k>3?0:1-ss(seg(u,.86,.98));
+    set.forEach(m=>{m.visible=s>.01;m.scale.setScalar(Math.max(s,1e-3));});});
+  // test: the design runs as a simulated (wireframe) copy and tries to reach the target
+  const testing=phase==='reward';
+  o.meshes.forEach(x=>{x.o.material=testing?W(C.sens,.7):x.m;});
+  const a=testing?Math.sin(seg(u,.3,.9)*Math.PI):0;
+  o.P1.rotation.z=-a*(k>=1?.75:1.1);o.E.rotation.z=-a*.9;o.R.position.x=-.6+a*.35;
+  const reached=testing&&k>=1&&k!==3&&a>.85;
+  o.ballM.emissiveIntensity=reached?1.2+Math.sin(t*10)*.3:.4;
+  // reward meter (no numbers: only its change matters)
+  const kept=[.06,.25,.55,.7,.7,.92],tried=[.25,.55,.7,.45,.92];
+  let r=k<0?kept[0]:(testing?lerp(kept[k],tried[k],seg(u,.3,.85)):(u>=.9?(k===3?kept[4]:tried[k]):kept[k]));
+  if(k===3&&u>=.86)r=lerp(tried[3],kept[4],seg(u,.86,.98));
+  o.bar.scale.y=Math.max(r*2.2,.01);o.bar.position.y=r*1.1;
+  const falling=k===3&&testing;o.barM.color.setHex(falling?C.fail:C.pass);o.barM.emissive.setHex(falling?C.fail:C.pass);
+  o.acts.forEach((l,i)=>setOp(l,i===k&&phase==='action'?1:0));
+  setOp(o.test,testing&&!(k===3&&u>.7)?1:0);
+  setOp(o.drop,k===3&&u>.7?1:0);
+  setOp(o.pass,k===4&&u>.85?1:0);
+  if(phase!==o.last){o.rows.forEach(d=>d.classList.toggle('on',d.dataset.def===phase));o.last=phase;}
+}};
+S.splice(4,0,RL);
+
+/* humanoid default: twenty years of the same shape, in front of a city */
+const H0={fog:[0x1a2240,14,60],build(g){
+  g.add(stripIsland(22,3.2,C.terrain2));
+  const row=[];
+  for(let k=0;k<11;k++){const x=-10+k*2;
+    const ped=cyl(.42,.48,.14,6,M(0x4a5a8c));ped.position.set(x,.07,0);g.add(ped);
+    const h=humanoid();h.position.set(x,.14,0);h.scale.setScalar(1+k*.012);g.add(h);row.push(h);}
+  [['2026',-10],['2036',0],['2046',10]].forEach(([tx,x])=>{const l=label(tx,{fs:40,scale:.0068});l.position.set(x,2.1,0);g.add(l);});
+  const cap=label('SAME SHAPE, EVERY GENERATION',ORANGE_LABEL);cap.position.set(2,2.9,0);g.add(cap);
+  const T=town({seed:4,r:6.5,nw:18,work:true});T.g.position.set(0,-.3,-11);g.add(T.g);
+  this.o={row,cap,T};
+},update(p,t){
+  const o=this.o;
+  camPath(p,[[0,[3,8.5,4],[0,.2,-10]],[.3,[-12,3.6,8.5],[-6,1,0]],[.65,[0,3.6,10],[2,1,0]],[1,[12,5,12],[3,1,0]]]);
+  updTown(o.T,t);
+  o.row.forEach((h,k)=>{h.rotation.y=Math.sin(t*.4+k*.3)*.15;});
+  setOp(o.cap,seg(p,.2,.4));
+}};
+
+/* how we got here: five beats around one humanoid */
+const H1={fog:[0x141c36,18,70],build(g){
+  g.add(island(3.2,C.terrain2));
+  const hero=humanoidX(null,true);hero.scale.setScalar(1.25);g.add(hero);
+  const twinM=WN(C.sens,.7);const twin=humanoidX(twinM);twin.scale.setScalar(1.25);g.add(twin);
+  const crowd=[];const r=rng(7);
+  for(let k=0;k<14;k++){const a=k/14*Math.PI*2,R=1.6+(k%2)*.9;const h=humanoid();h.position.set(Math.cos(a)*R,0,Math.sin(a)*R);h.rotation.y=-a+Math.PI/2;h.userData.ph=r()*6;g.add(h);crowd.push(h);}
+  const envM=WN(C.act,.5);const env=new THREE.Mesh(new THREE.IcosahedronGeometry(1.25,1),envM);env.position.y=1.15;g.add(env);
+  const envL=label('HUMAN ENVELOPE',ORANGE_LABEL);envL.position.set(0,2.7,0);g.add(envL);
+  const sat=[];
+  const mk=(x,z,name,build)=>{const ig=island(1.7,C.terrain);ig.position.set(x,-.4,z);build(ig);const l=label(name);l.position.set(x,2.4,z);g.add(ig,l);sat.push({ig,l});};
+  mk(-6.5,-2,'FUSION REACTOR',ig=>{const tor=new THREE.Mesh(new THREE.TorusGeometry(.8,.32,8,18),M(0x8892B0,{metalness:.4}));tor.rotation.x=Math.PI/2;tor.position.y=.5;ig.add(tor);
+    const glow=new THREE.Mesh(new THREE.TorusGeometry(.8,.12,6,18),M(0xc77dff,{emissive:0xc77dff,emissiveIntensity:1}));glow.rotation.x=Math.PI/2;glow.position.y=.5;ig.add(glow);});
+  mk(6.5,-2,'ORBITAL ASSEMBLY',ig=>{const tr=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(.4,1.6,.4,1,4,1)),new THREE.LineBasicMaterial({color:0xE8ECF6}));tr.position.y=.9;ig.add(tr);
+    const tr2=tr.clone();tr2.rotation.z=Math.PI/2;tr2.position.set(.4,1.5,0);ig.add(tr2);
+    const pan=bx(.9,.03,.5,M(0x3557a8,{metalness:.5,roughness:.3}));pan.position.set(1.0,1.5,0);ig.add(pan);});
+  mk(-5,4,'FIELD HARVEST',ig=>{for(let k=0;k<3;k++){const row=bx(2.2,.18,.28,M(0x5b4a3a));row.position.set(0,.09,-.7+k*.7);ig.add(row);
+    for(let j=0;j<7;j++){const pl=ico(.11,M(j%3?C.plant:C.berry));pl.position.set(-.95+j*.32,.28,-.7+k*.7);ig.add(pl);}}});
+  mk(5,4,'MICRO-SURGERY',ig=>{const base=cyl(.5,.6,.2,8,M(0xdde3ee));base.position.y=.1;ig.add(base);
+    const a=bx(.06,.9,.06,M(0x8892B0));a.position.set(.2,.65,0);a.rotation.z=.35;ig.add(a);
+    const tip=new THREE.Mesh(new THREE.ConeGeometry(.03,.25,6),M(C.sens,{emissive:C.sens,emissiveIntensity:.8}));tip.rotation.z=Math.PI;tip.position.set(.05,.28,0);ig.add(tip);});
+  const fixL=label('CHOSEN BY HAND',{color:'#ffd0d8',border:'rgba(255,59,92,.9)'});fixL.position.set(0,3.2,0);g.add(fixL);
+  const lockM=new THREE.LineBasicMaterial({color:0xFF3B5C,transparent:true,opacity:0});
+  const lock=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.1,2.1,.7)),lockM);lock.position.y=1.05;g.add(lock);
+  const T=town({seed:9,r:6.5,nw:16,work:true});T.g.position.set(0,-.5,-14);g.add(T.g);
+  this.o={hero,twin,twinM,crowd,env,envM,envL,sat,fixL,lock,lockM,T};
+},update(p,t){
+  const o=this.o;
+  camPath(p,[[0,[4.5,2.6,6],[0,1.2,0]],[.14,[3.8,2.4,5.2],[0,1.2,0]],
+    [.2,[0,5.5,10],[0,.8,0]],[.32,[-1,5.2,9.5],[0,.8,0]],
+    [.37,[2.6,2.2,5],[0,1.3,0]],[.49,[2,2.4,5.4],[0,1.3,0]],
+    [.55,[0,9,17],[0,.6,1]],[.66,[1,9.5,17.5],[0,.6,1]],
+    [.71,[-3,2.6,6],[0,1.4,0]],[.83,[-2.6,2.8,6.4],[0,1.4,0]],
+    [.92,[0,2.6,7.4],[0,1.8,0]],[1,[0,2.4,6.6],[0,1.8,0]]]);
+  updTown(o.T,t);
+  const c=ss(seg(p,.02,.14));
+  o.twin.position.x=lerp(1.6,0,c);o.twin.position.z=lerp(.3,0,c);
+  o.twinM.opacity=.7*(1-seg(p,.15,.2))+.0001;o.twin.visible=p<.2;
+  const cr=seg(p,.18,.24)*(1-seg(p,.33,.37));
+  o.crowd.forEach((h,k)=>{const d=clamp(cr*1.4-k*.03);h.visible=d>.01;h.scale.setScalar(Math.max(d,1e-3));walk(h,t*2+h.userData.ph,.12);});
+  const ev=seg(p,.35,.4)*(1-seg(p,.66,.7));
+  o.envM.opacity=.5*ev;o.env.visible=ev>.01;o.env.rotation.y=t*.15;o.env.scale.setScalar(.9+.1*ev);
+  setOp(o.envL,seg(p,.36,.4)*(1-seg(p,.5,.53)));
+  o.sat.forEach((st,k)=>{const u=ss(seg(p,.52+k*.02,.58+k*.02))*(1-seg(p,.68,.72));st.ig.position.y=lerp(-6,-.4,u);st.ig.visible=u>.01;setOp(st.l,u);});
+  const lk=seg(p,.7,.74)*(1-seg(p,.86,.9));
+  o.lockM.opacity=lk;o.lock.visible=lk>.01;setOp(o.fixL,lk);
+  // close: the body comes apart and turns to wireframe, ready to be redesigned
+  const ex=ss(seg(p,.87,.97));const P=o.hero.userData.P;
+  for(const k in P){const m=P[k],h=m.userData.home;
+    m.position.set(h.x*(1+ex*3)+Math.sin(h.y*5)*ex*.25,h.y+(h.y-.9)*ex*.7+ex*.35,h.z+Math.sin(h.y*7+h.x*13)*ex*.3);
+    m.rotation.set(ex*Math.sin(h.y*9)*.8,ex*h.x*4,ex*Math.cos(h.x*11)*.5);m.material.wireframe=ex>.4;}
+  o.hero.rotation.y=Math.sin(t*.3)*.2*(1-ex);
+}};
+
+/* thesis: the parts of the old body drift in front of a working city */
+const H2={fog:[0x141c36,12,52],build(g){
+  const h=humanoidX(WN(C.sens,.85));h.scale.setScalar(1.6);h.position.x=1.4;g.add(h);
+  const P=h.userData.P;const parts=[];
+  for(const k in P){const m=P[k];m.userData.seed=Math.sin(m.userData.home.y*9+m.userData.home.x*17);parts.push(m);}
+  const dust=new THREE.BufferGeometry();const NP=180,pos=new Float32Array(NP*3);
+  for(let i=0;i<NP;i++){pos[i*3]=Math.sin(i*12.9)*7;pos[i*3+1]=(Math.sin(i*7.3)*.5+.5)*6-1;pos[i*3+2]=Math.sin(i*3.7)*5-2;}
+  dust.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const pts=new THREE.Points(dust,new THREE.PointsMaterial({color:0x3DDCFF,size:.04,transparent:true,opacity:.6}));g.add(pts);
+  const T=town({seed:21,r:6.5,nw:18,work:true});T.g.position.set(-4,-1.8,-15);g.add(T.g);
+  this.o={parts,pts,T};
+},update(p,t){
+  const o=this.o;
+  camPath(p,[[0,[2.6,2.6,6.4],[1.2,1.9,0]],[1,[3.6,3.2,7.6],[1.4,1.8,0]]]);
+  o.parts.forEach(m=>{const hm=m.userData.home,sd=m.userData.seed;
+    m.position.set(hm.x*4+sd*.3,hm.y+(hm.y-.9)*.7+.35+Math.sin(t*.6+sd*4)*.06,hm.z+sd*.3);
+    m.rotation.set(sd*.8+t*.1*sd,hm.x*4+t*.15,sd*.5);});
+  o.pts.rotation.y=t*.02;updTown(o.T,t);
+}};
+
+S.splice(1,0,H0,H1,H2);
+
+let groups=[];
+function resize(){if(!renderer||!camera)return;const w=innerWidth,h=innerHeight;renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setSize(w,h,false);
+  camera.aspect=w/h;camera.fov=w/h>=1.3?40:lerp(62,40,clamp((w/h-.5)/.8));camera.updateProjectionMatrix();}
+function init(){
+  if(!renderer)return;
+  scene=new THREE.Scene();scene.fog=new THREE.Fog(0x0B1020,30,95);
+  camera=new THREE.PerspectiveCamera(40,1,.05,400);
+  hemi=new THREE.HemisphereLight(0xbfd4ff,0x1a2035,.9);scene.add(hemi);
+  key=new THREE.DirectionalLight(0xffe2c0,1.1);key.position.set(5,9,6);scene.add(key);
+  rim=new THREE.DirectionalLight(0x6fd8ff,.55);rim.position.set(-6,4,-6);scene.add(rim);
+  groups=S.map((d,i)=>{const g=new THREE.Group();g.visible=false;try{d.build(g);}catch(e){console.error('build',i,e);d.broken=true;}scene.add(g);return g;});
+  resize();requestAnimationFrame(frame);
+}
+const veil=document.getElementById('veil');
+const t0=performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  const t=REDUCED?0:(now-t0)/1000;
+  mx=lerp(mx,MX,.05);my=lerp(my,MY,.05);
+  overlays();
+  const d=S[active];
+  groups.forEach((g,k)=>g.visible=k===active&&!S[k].broken);
+  const fg=d.fog||[0x0B1020,30,95];scene.fog.color.setHex(fg[0]);scene.fog.near=fg[1];scene.fog.far=fg[2];
+  if(!d.broken){try{d.update(progress[active],t);}catch(e){console.error('update',active,e);d.broken=true;}}
+  veil.style.opacity=Math.max(veilAmt,d.veil?d.veil(progress[active]):0).toFixed(3);
+  renderer.render(scene,camera);
+}
+const ready=document.fonts&&document.fonts.ready?Promise.race([document.fonts.ready,new Promise(r=>setTimeout(r,1500))]):Promise.resolve();
+ready.then(()=>{layout();init();});
+if(!renderer){(function loop(){overlays();requestAnimationFrame(loop);})();}
+})();
+</script>
+
+</body>
+</html>
